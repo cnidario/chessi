@@ -1,72 +1,9 @@
-// Estado del juego
-typedef enum Color { WHITE, BLACK, COLOR_NB } Color;
-typedef enum PieceType { Pawn, Rook, Knight, Bishop, Queen, King, UnmovedSpecial } PieceType;
-// UnmovedSpecial es Torre, Rey o Peón aún sin mover. También Peón recién salido en pasante.
-typedef struct ChessSt {
-	unsigned long long piece_present[COLOR_NB]; //64*2 bits presencia/color bitboard
-	unsigned char pieces[32]; //4bits por pieza
-	//posición de los reyes, 3x2=6 bits por posición x2 = 12+1=13 bit turno
-	//2*2 = 4 bits posibilidad de enroque (izqda. y dcha)
-	//3b + 1 = 4 indicación en passant + columna
-	//total = 22bits, passant + enroque = 8, aparte
-	unsigned short king_pos;
-	unsigned char castling_passant;
-} ChessSt;
-typedef unsigned short Move;
+#include "chessi.h"
 
-typedef enum Mask { TURN_BIT = 12, 
-					WKING_POSMK = 0x3f,
-					BKING_POSMK = 0xfc0,
-					COLOR_BIT = 3,
-					CASTLING_BIT = 7,
-					LEFT_CASTLING_BIT = 7,
-					RIGHT_CASTLING_BIT = 6, //5 y 4 para negras
-					PASSANT_BIT = 3,
-					PASSANT_COLUMN_MASK = 0x7,
-					LEFT = 0,
-					RIGHT = 1
-			};
-#define MOVE1_POSMK WKING_POSMK
-#define MOVE2_POSMK BKING_POSMK
-
-#define FLAG(bitarray, n) (((bitarray) >> (n)) & 0x1)
-#define BITPACK(bitarray, first, length) (((bitarray) >> (first)) & (((unsigned long long)-1)>>(64-length)))
-#define POS1(move) ((move) & MOVE1_POSMK)
-#define POS2(move) (((move) & MOVE2_POSMK) >> 6)
-#define TURN(game) (FLAG((game)->king_pos, TURN_BIT))
-#define PRESENT(game, pos, color) (FLAG((game)->piece_present[color], pos))
-#define OCUPPIED(game, pos) (PRESENT(game, pos, WHITE) || PRESENT(game, pos, BLACK))
-#define PIECE_AT(game, pos) (((pos)%2) ? \
-								  ((game)->pieces[(pos)/2] & 0xF0) >> 4 \
-								: ((game)->pieces[(pos)/2] & 0xF))
-#define COLOR(game, pos) (PRESENT(game, pos, BLACK))
-#define OPONENT(color) (((color) + 1) % 2)
-#define OOB(p) ((p) >= 64) //out of bounds
-#define COLUMN(pos) ((pos)%8)
-#define ROW(pos) ((pos)/8)
-#define ABS(x) ((x) > 0? (x) : -(x))
-//casilla alcanzable desde otra en una dirección
-#define REACHABLE(from, to, dir) (((to) - (from)) % (dir) && \
-							((dir) > 0 && (from) < (to)) || \
-							((dir) < 0 && (from) > (to)) )
-#define CANCASTLE_(game, color, side) (FLAG((game)->castling_passant, CASTLING_BIT + (side) + (color)<<1))
-#define CANCASTLE(game, side) (CANCASTLE_(game, TURN(game), side))
-#define PASSANT(game) (FLAG((game)->castling_passant, PASSANT_BIT))
-#define PASSANT_COL ((game)->castling_passant & PASSANT_COLUMN_MASK)
-
-/*
-typedef struct Direction {
-	int d;
-	int horiz_overflow;
-};
-const Direction N = {8, 0};
-*/
-
-typedef enum Direction { N = 8, S = -8, E = 1 , O = -1, NE = 9, NO = 7, SE = -7, SE = -9 };
-char KNIGHT_MOVES[8] = {
-	8+8+1, 8+2, -8+2, -8-8+1,
-	8+8-1, 8-2, -8-2, -8-8-1
-};
+void parseGame(ChessSt *game, char *str) {
+	//XXXX próximo: parsear game de string,
+	//RNBQKBNRPPPPPPPPXXXX...XXXXPPPPPPPPRNBQKBNR
+}
 
 // Primera pieza desde una posición en una dirección.
 // Se proyecta la dirección buscando la primera pieza desde la posición
@@ -86,44 +23,36 @@ int firstPieceAt(ChessSt *game, unsigned char from, Direction dir) {
 	}
 }
 
-int validMove(ChessSt *game, Move move) {
-	//1. la posición de partida del movimiento debe tener pieza del color del turno
-	//2. la posición de llegada del mov. NO puede tener pieza del color del turno
-	//3. posiciones deben guardar tipo de movimiento válido en relación al tipo de pieza
-	//4. la jugada no debe dejar al color del turno en estado de jaque
-	int valid = MYCOLOR_AT(game, POS1(move)) 
-				&& !(PIECE_COLOR(PIECE_AT(game, POS2(move))) & CURR_TURN(game))
-	int valid = game->piece_present[CURR_TURN(game)] & (1 << (move & MOVE1_POSMK));
-}
-
 int isValidCastle(ChessSt *game, unsigned char pos1, unsigned char pos2) {
 	unsigned char col, row;
-	int dpos;
+	int dpos, side, p0, count, i;
 	Color color;
-	int i;
 	col = COLUMN(pos1);
 	row = ROW(pos1);
 	dpos = pos1 - pos2;
 	color = TURN(game);
-	//5.1. movimiento enroque
-	if((col == 4 && (row == color?7:0)) && ABS(dpos) == 2) {				
-		if(dpos > 0) { //5.1.1. enroque largo
-			if(!CANCASTLE(game, LEFT)) return -1;
-			for(i = 1; i < 4; i++) {
-				if(OCUPPIED(game, pos1 - i)) return -1;
-			}
-			for(i = 0; i < 5; i++) {
-				if(isMenaced(game, pos1 - i, OPONENT(color))) return -1;
-			}
-		} else { //5.1.2. enroque corto
-			//XXX aquí me quedé, refactorizar y unir los dos casos
-		}
+	if((col != 4 || (row != color?7:0)) || ABS(dpos) != 2) return 0; //5.1. movimiento enroque
+	side = dpos < 0; //dpos > 0 enroque largo = izqda, sino enroque corto
+	p0 = side? pos1 : pos2 - 2; //posición menor, los recorridos los hacemos todos en sentido creciente
+	count = side? 2 : 3; //cuenta de posiciones adicionales además de la del rey y la torre
+	if(!CANCASTLE(game, side)) return 0;
+	for(i = 1; i <= count; i++) {
+		if(OCUPPIED(game, p0 + i)) return 0;
 	}
+	for(i = 0; i <= count + 2; i++) {
+		if(isMenaced(game, p0 + i, OPONENT(color))) return 0;
+	}
+	return 1;
 }
+
+char KNIGHT_MOVES[8] = {
+	8+8+1, 8+2, -8+2, -8-8+1,
+	8+8-1, 8-2, -8-2, -8-8-1
+};
 
 int validPieceMove(ChessSt *game, unsigned char pos1, unsigned char pos2, unsigned char piece) {
 	int i, j;
-	unsigned char p, col, row;
+	unsigned char p, q, col, row, pawn_dir;
 	Color color = TURN(game);
 	col = COLUMN(pos1);
 	switch(piece) {
@@ -158,8 +87,38 @@ int validPieceMove(ChessSt *game, unsigned char pos1, unsigned char pos2, unsign
 					p = pos1 + j + i<<3;
 					if(pos2 == p && !(ABS(col - COLUMN(p)) > 2 || OOB(p))) return 1;
 				}
-			
-
+			return isValidCastle(game, pos1, pos2);
+		case Pawn:
+			pawn_dir = color ? S : N;
+			//6.1. ó posición 2 = posición 1 + N/S, en posición 2 no debe haber pieza
+			p = pos1 + pawn_dir;
+			if(pos2 == p && !OCCUPIED(game, p)) return 1;
+			//6.2. ó posición 2 = posición 1 + NE ó NO / SE ó SO, y en posición 2 debe haber pieza
+			//6.3. ó posición 2 = posición 1 + NE ó NO / SE ó SO, y fila de posición 1 = 5/3 y pasante en columna de posicion 2
+			row = ROW(pos1);
+			if(pos2 == p + E || pos2 == p + O) {
+				if(PRESENT(game, pos2, OPONENT(color))) return 1; //6.2
+				col2 = COLUMN(pos2);
+				if(row == (color? 3 : 5) && CANPASSANT(game, COLUMN(pos2))) return 1;
+			}
+			//6.4. ó fila de posición 1 = 2/6 y el camino entre p1 y p2 libre por dirección N/S y p2 libre
+			if(row == (color? 6 : 2) && firstPieceAt(game, pos2, color ? N : S) == pos1) return 1;
+			return 0;
 	}
-
 }
+
+int validMove(ChessSt *game, Move move) {
+	int pos1, pos2;
+	Color color;
+	pos1 = POS1(game, move);
+	pos2 = POS2(game, move);
+	color = TURN(game);
+	//1. la posición de partida del movimiento debe tener pieza del color del turno
+	if(COLOR(game, pos1) != color) return 0;
+	//2. la posición de llegada del mov. NO puede tener pieza del color del turno
+	if(COLOR(game, pos2) == color) return 0;
+	//3. posiciones deben guardar tipo de movimiento válido en relación al tipo de pieza
+	if(!validPieceMove(game, pos1, pos2, PIECE_AT(game, pos1))) return 0;
+	//4. la jugada no debe dejar al color del turno en estado de jaque
+}
+

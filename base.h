@@ -48,7 +48,7 @@ typedef enum Mask { TURN_BIT = 12,
 #define POS2(move) (((move) & MOVE2_POSMK) >> 6)
 #define TURN(game) (FLAG((game)->king_pos, TURN_BIT))
 #define PRESENT(game, pos, color) (FLAG((game)->piece_present[color], pos))
-#define OCUPPIED(game, pos) (PRESENT(game, pos, WHITE) || PRESENT(game, pos, BLACK))
+#define OCCUPIED(game, pos) (PRESENT(game, pos, WHITE) || PRESENT(game, pos, BLACK))
 #define PIECE_AT(game, pos) (((pos)%2) ? \
 								  ((game)->pieces[(pos)/2] & 0xF0) >> 4 \
 								: ((game)->pieces[(pos)/2] & 0xF))
@@ -71,18 +71,14 @@ typedef enum Mask { TURN_BIT = 12,
 typedef enum Direction { N = 8, S = -8, E = 1 , O = -1, NE = 9, NO = 7, SE = -7, SO = -9 } Direction;
 //se cumple: NE = N + E, NO = N + O. Lo mismo para S, E y O.
 
-
+#define MOVE(pos1, pos2) ((Move)((pos2)<<6)&(pos1))
 //Modificadores
-void setPiece(ChessSt *game, unsigned char pos, PieceType piece) {
-	if(pos % 2) {
-		game->pieces[pos/2] = (game->pieces[pos/2] & 0xF) | (piece << 4);
-	} else {
-		game->pieces[pos/2] = (game->pieces[pos/2] & 0xF0) | piece;
-	}
-}
-void setColor(ChessSt *game, unsigned char pos, Color color) {
-	game->piece_present[color] |= 1 << pos;
-	game->piece_present[OPONENT(color)] |= ~(1 << pos);
-}
+void setPiece(ChessSt *game, unsigned char pos, PieceType piece);
+void setColor(ChessSt *game, unsigned char pos, Color color);
+void unsetColor(ChessSt *game, unsigned char pos, Color color);
+void setPassant(ChessSt *game, unsigned char column);
+void unsetPassant(ChessSt *game);
+void setCastle(ChessSt *game, Color color, unsigned char side);
+void unsetCastle(ChessSt *game, Color color, unsigned char side);
 
 #endif

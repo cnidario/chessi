@@ -1,10 +1,4 @@
 #include "chessi.h"
-
-void parseGame(ChessSt *game, char *str) {
-	//XXXX próximo: parsear game de string,
-	//RNBQKBNRPPPPPPPPXXXX...XXXXPPPPPPPPRNBQKBNR
-}
-
 // Primera pieza desde una posición en una dirección.
 // Se proyecta la dirección buscando la primera pieza desde la posición
 // Se devuelve la primera posición en esa dirección con una pieza o -1 si no hay posible
@@ -37,7 +31,7 @@ int isValidCastle(ChessSt *game, unsigned char pos1, unsigned char pos2) {
 	count = side? 2 : 3; //cuenta de posiciones adicionales además de la del rey y la torre
 	if(!CANCASTLE(game, side)) return 0;
 	for(i = 1; i <= count; i++) {
-		if(OCUPPIED(game, p0 + i)) return 0;
+		if(OCCUPIED(game, p0 + i)) return 0;
 	}
 	for(i = 0; i <= count + 2; i++) {
 		if(isMenaced(game, p0 + i, OPONENT(color))) return 0;

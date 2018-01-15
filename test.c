@@ -8,7 +8,7 @@ void assertTrue(char *title, int condition) {
 		puts(title);
 	}
 }
-int test1() {
+int test_piecePlacing_1() {
 	ChessSt game;
 	unsigned char pos;
 	Color color;
@@ -38,18 +38,26 @@ int test1() {
 		assertTrue("posición no debe contener pieza del oponente", !PRESENT(&game, pos, OPONENT(color)));
 	}
 }
-int test1_2() {
+int test_piecePlacing_2() {
 	ChessSt game;
 	initGame(&game);
 	setColor(&game, 58, WHITE);
 	assertTrue("posición 58 debe contener pieza blanca", PRESENT(&game, 58, WHITE));
 }
-int test2() {
+int test_printGame_1() {
 	ChessSt game;
 	parseGame(&game, "RNBQKBNRPPPPPPPP................................pppppppprnbqkbnr");
 	printGame(&game);
 }
+int test_castling_1() {
+	ChessSt game;
+	initGame(&game);
+	assertTrue("enroque a la izquierda para blancas debe estar permitido", CANCASTLE_(&game, WHITE, LEFT));
+	assertTrue("enroque a la derecha para blancas debe estar permitido", CANCASTLE_(&game, WHITE, RIGHT));
+	assertTrue("enroque a la izquierda para negras debe estar permitido", CANCASTLE_(&game, BLACK, LEFT));
+	assertTrue("enroque a la derecha para negras debe estar permitido", CANCASTLE_(&game, BLACK, RIGHT));
+}
 
 int main(int argc, char *argv[]) {
-	test2();
+	test_printGame_1();
 }

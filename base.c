@@ -22,8 +22,14 @@ void unsetPassant(ChessSt *game) {
 	game->castling_passant &= ~(1 << PASSANT_BIT);
 }
 void setCastle(ChessSt *game, Color color, unsigned char side) {
-	game->castling_passant |= 1 << CASTLING_BIT + side + (color<<1);
+	game->castling_passant |= 1 << CASTLING_BIT - side - (color<<1);
 }
 void unsetCastle(ChessSt *game, Color color, unsigned char side) {
-	game->castling_passant &= ~(1 << CASTLING_BIT + side + (color<<1));
+	game->castling_passant &= ~(1 << CASTLING_BIT - side - (color<<1));
+}
+void setKing(ChessSt *game, unsigned char pos, Color color) {
+	if(color)
+		game->king_pos = (game->king_pos & ~BKING_POSMK) | pos << POS_LEN;
+	else
+		game->king_pos = (game->king_pos & ~WKING_POSMK) | pos;
 }

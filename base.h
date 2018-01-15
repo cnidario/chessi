@@ -6,8 +6,8 @@
 	Se utilizarán tan sólo los tipos
 	Color, PieceType, Move, Direction
 	además de las macros
-	POS1, POS2, TURN, PRESENT, OCCUPIED, PIECE_AT, COLOR, OPONENT, OOB, COLUMN, ROW,
-	ABS, REACHABLE, CANCASTLE, CANPASSANT
+	POS_LEN, POS1, POS2, TURN, PRESENT, OCCUPIED, PIECE_AT, COLOR, OPONENT, OOB, COLUMN, ROW,
+	ABS, REACHABLE, CANCASTLE, CANPASSANT, MOVE, WKING_POS, BKING_POS
 */
 #ifndef __BASE_H__
 #define __BASE_H__
@@ -28,8 +28,8 @@ typedef struct ChessSt {
 typedef unsigned short Move;
 
 typedef enum Mask { TURN_BIT = 12, 
-					WKING_POSMK = 0x3f,
-					BKING_POSMK = 0xfc0,
+					WKING_POSMK = 0x3f, //~(-1<<6)
+					BKING_POSMK = 0xfc0,//(~(-1<<6))<<6
 					COLOR_BIT = 3,
 					CASTLING_BIT = 7,
 					LEFT_CASTLING_BIT = 7,
@@ -39,13 +39,15 @@ typedef enum Mask { TURN_BIT = 12,
 					LEFT = 0,
 					RIGHT = 1
 				} Mask;
+#define POS_LEN 6
 #define MOVE1_POSMK WKING_POSMK
 #define MOVE2_POSMK BKING_POSMK
 
 #define FLAG(bitarray, n) (((bitarray) >> (n)) & 0x1)
-#define BITPACK(bitarray, first, length) (((bitarray) >> (first)) & (((unsigned long long)-1)>>(64-length)))
 #define POS1(move) ((move) & MOVE1_POSMK)
-#define POS2(move) (((move) & MOVE2_POSMK) >> 6)
+#define POS2(move) (((move) & MOVE2_POSMK) >> POS_LEN)
+#define WKING_POS(game) (POS1(game->king_pos))
+#define BKING_POS(game) (POS2(game->king_pos))
 #define TURN(game) (FLAG((game)->king_pos, TURN_BIT))
 #define PRESENT(game, pos, color) (FLAG((game)->piece_present[color], pos))
 #define OCCUPIED(game, pos) (PRESENT(game, pos, WHITE) || PRESENT(game, pos, BLACK))
@@ -62,7 +64,7 @@ typedef enum Mask { TURN_BIT = 12,
 #define REACHABLE(from, to, dir) (((to) - (from)) % (dir) && \
 							((dir) > 0 && (from) < (to)) || \
 							((dir) < 0 && (from) > (to)) )
-#define CANCASTLE_(game, color, side) (FLAG((game)->castling_passant, CASTLING_BIT + (side) + (color)<<1))
+#define CANCASTLE_(game, color, side) (FLAG((game)->castling_passant, CASTLING_BIT - (side) - ((color)<<1)))
 #define CANCASTLE(game, side) (CANCASTLE_(game, TURN(game), side))
 #define PASSANT(game) (FLAG((game)->castling_passant, PASSANT_BIT))
 #define PASSANT_COL(game) ((game)->castling_passant & PASSANT_COLUMN_MASK)
@@ -80,5 +82,6 @@ void setPassant(ChessSt *game, unsigned char column);
 void unsetPassant(ChessSt *game);
 void setCastle(ChessSt *game, Color color, unsigned char side);
 void unsetCastle(ChessSt *game, Color color, unsigned char side);
+void setKing(ChessSt *game, unsigned char pos, Color color);
 
 #endif

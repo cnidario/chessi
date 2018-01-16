@@ -9,7 +9,7 @@ void setPiece(ChessSt *game, unsigned char pos, PieceType piece) {
 }
 void setColor(ChessSt *game, unsigned char pos, Color color) {
 	game->piece_present[color] |= 1L << pos;
-	game->piece_present[OPONENT(color)] &= ~(1L << pos);
+	unsetColor(game, pos, OPONENT(color));
 }
 void unsetColor(ChessSt *game, unsigned char pos, Color color) {
 	game->piece_present[color] &= ~(1L << pos);
@@ -32,4 +32,14 @@ void setKing(ChessSt *game, unsigned char pos, Color color) {
 		game->king_pos = (game->king_pos & ~BKING_POSMK) | pos << POS_LEN;
 	else
 		game->king_pos = (game->king_pos & ~WKING_POSMK) | pos;
+}
+void copy(ChessSt *dst, ChessSt *src) {
+	int i;
+	dst->piece_present[WHITE] = src->piece_present[WHITE];
+	dst->piece_present[BLACK] = src->piece_present[BLACK];
+	for(i = 0; i < 32; i++) {
+		dst->pieces[i] = src->pieces[i];
+	}
+	dst->king_pos = src->king_pos;
+	dst->castling_passant = src->castling_passant;
 }

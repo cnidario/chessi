@@ -1,4 +1,71 @@
 #include "chessi.h"
+
+Direction STRAIGHT_MOVES[] = { N, E, S, O };
+Direction DIAGONAL_MOVES[] = { NO, NE, SE, SO };
+char KNIGHT_MOVES[] = {
+	8+8+1, 8+2, -8+2, -8-8+1,
+	8+8-1, 8-2, -8-2, -8-8-1
+};
+
+int isCheck(ChessSt *game) {
+	Color color;
+	//1. posición del rey del turno amenazada
+	color = TURN(game);
+	return isMenaced(game, color? WKING_POS(game) : BKING_POS(game), OPONENT(color));
+}
+
+int isMenaced(ChessSt *game, unsigned char pos, Color color) {
+	unsigned char p, col, dc, dr;
+	int i, dp;
+	Direction d;
+	PieceType piece;
+	//1. camino entre posición en direcciones NESO no debe acabar en reina o torre de color contrario
+	for(i = 0; i < sizeof(STRAIGHT_MOVES)/sizeof(Direction); i++) {
+		d = STRAIGHT_MOVES[i];
+		p = firstPieceAt(game, pos, d);
+		if(p != -1) {
+			piece = PIECE_AT(game, p);
+			if((piece == Rook || piece == Queen) && COLOR(game, p) == color)
+				return p;
+		}
+	}
+	//2. " " NE,SE,NO,SO alfil o reina de color contrario
+	for(i = 0; i < sizeof(DIAGONAL_MOVES)/sizeof(Direction); i++) {
+		d = DIAGONAL_MOVES[i];
+		p = firstPieceAt(game, pos, d);
+		if(p != -1) {
+			piece = PIECE_AT(game, p);
+			if((piece == Bishop || piece == Queen) && COLOR(game, p) == color)
+				return p;
+		}
+	}
+	//3. posiciones de caballo desde posición no deben contener caballo contrario
+	col = COLUMN(pos);
+	for(i = 0; i < sizeof(KNIGHT_MOVES)/sizeof(char); i++) {
+		dp = KNIGHT_MOVES[i];
+		p = pos + dp;
+		if(!OVERFLOW_MOVE(col, p)) {
+			piece = PIECE_AT(game, p);
+			if(piece == Knight && COLOR(game, p) == color)
+				return p;
+		}
+	}
+	//4. rey contrario no adyacente
+	p = color ? BKING_POS(game) : WKING_POS(game);
+	dc = ABS(col - COLUMN(p));
+	dr = ABS(ROW(pos) - ROW(p));
+	if(dc <= 1 && dr <= 1 && (dc || dr))
+		return p;
+	//5. posición + {NE,NO}/{SE,SO} no debe contener peón contrario
+	d = color ? N : S;
+	p = pos + d + E;
+	if(PIECE_AT(game, p) == Pawn && COLOR(game, p) == color)
+		return p;
+	p = pos + d + O;
+	if(PIECE_AT(game, p) == Pawn && COLOR(game, p) == color)
+		return p;
+	return -1;
+}
 // Primera pieza desde una posición en una dirección.
 // Se proyecta la dirección buscando la primera pieza desde la posición
 // Se devuelve la primera posición en esa dirección con una pieza o -1 si no hay posible
@@ -39,14 +106,9 @@ int isValidCastle(ChessSt *game, unsigned char pos1, unsigned char pos2) {
 	return 1;
 }
 
-char KNIGHT_MOVES[8] = {
-	8+8+1, 8+2, -8+2, -8-8+1,
-	8+8-1, 8-2, -8-2, -8-8-1
-};
-
 int validPieceMove(ChessSt *game, unsigned char pos1, unsigned char pos2, unsigned char piece) {
 	int i, j;
-	unsigned char p, q, col, row, pawn_dir;
+	unsigned char p, q, col, col2, row, pawn_dir;
 	Color color = TURN(game);
 	col = COLUMN(pos1);
 	switch(piece) {
@@ -68,9 +130,9 @@ int validPieceMove(ChessSt *game, unsigned char pos1, unsigned char pos2, unsign
 				validPieceMove(game, pos1, pos2, Bishop);
 		// 4. si es caballo, la posición 2 debe estar en un conjunto de posibles determinadas por posición 1
 		case Knight:
-			for(i = 0; i < 8; i++) {
+			for(i = 0; i < sizeof(KNIGHT_MOVES)/sizeof(char); i++) {
 				p = KNIGHT_MOVES[i] + pos1; 
-				if(pos2 == p && !(ABS(col - COLUMN(p)) > 2 || OOB(p))) return 1;
+				if(pos2 == p && !OVERFLOW_MOVE(col, p)) return 1;
 			}
 			return 0;
 		case King:
@@ -79,7 +141,7 @@ int validPieceMove(ChessSt *game, unsigned char pos1, unsigned char pos2, unsign
 				for(j = -1; j <= 1; j++) {
 					if(!i && !j) continue; //no movimiento
 					p = pos1 + j + i<<3;
-					if(pos2 == p && !(ABS(col - COLUMN(p)) > 2 || OOB(p))) return 1;
+					if(pos2 == p && !OVERFLOW_MOVE(col, p)) return 1;
 				}
 			return isValidCastle(game, pos1, pos2);
 		case Pawn:
@@ -93,10 +155,10 @@ int validPieceMove(ChessSt *game, unsigned char pos1, unsigned char pos2, unsign
 			if(pos2 == p + E || pos2 == p + O) {
 				if(PRESENT(game, pos2, OPONENT(color))) return 1; //6.2
 				col2 = COLUMN(pos2);
-				if(row == (color? 3 : 5) && CANPASSANT(game, COLUMN(pos2))) return 1;
+				if(row == STARTPAWNROW(!color) + pawn_dir && CANPASSANT(game, COLUMN(pos2))) return 1;
 			}
 			//6.4. ó fila de posición 1 = 2/6 y el camino entre p1 y p2 libre por dirección N/S y p2 libre
-			if(row == (color? 6 : 2) && firstPieceAt(game, pos2, color ? N : S) == pos1) return 1;
+			if(row == STARTPAWNROW(color) && firstPieceAt(game, pos2, color ? N : S) == pos1) return 1;
 			return 0;
 	}
 }
@@ -104,8 +166,9 @@ int validPieceMove(ChessSt *game, unsigned char pos1, unsigned char pos2, unsign
 int validMove(ChessSt *game, Move move) {
 	int pos1, pos2;
 	Color color;
-	pos1 = POS1(game, move);
-	pos2 = POS2(game, move);
+	ChessSt game2;
+	pos1 = POS1(move);
+	pos2 = POS2(move);
 	color = TURN(game);
 	//1. la posición de partida del movimiento debe tener pieza del color del turno
 	if(COLOR(game, pos1) != color) return 0;
@@ -114,5 +177,41 @@ int validMove(ChessSt *game, Move move) {
 	//3. posiciones deben guardar tipo de movimiento válido en relación al tipo de pieza
 	if(!validPieceMove(game, pos1, pos2, PIECE_AT(game, pos1))) return 0;
 	//4. la jugada no debe dejar al color del turno en estado de jaque
+	copy(&game2, game);
+	doMove(&game2, move);
+	if(isCheck(&game2))
+		return 0;
+	return 1;
 }
 
+int doMove(ChessSt *game, Move move) {
+	int pos1, pos2, col, row;
+	Color color;
+	PieceType piece;
+	pos1 = POS1(move);
+	pos2 = POS2(move);
+	color = TURN(game);
+	piece = PIECE_AT(game, pos1);
+	unsetColor(game, pos1, color);
+	setColor(game, pos2, color);
+	setPiece(game, pos2, piece);
+	col = COLUMN(pos1);
+	if(CANCASTLE(game, LEFT) || CANCASTLE(game, RIGHT)) {
+		if(piece == Rook && col == 0)
+			unsetCastle(game, color, LEFT);
+		else if(piece == Rook && col == 7)
+			unsetCastle(game, color, RIGHT);
+		else if(piece == King) {
+			unsetCastle(game, color, LEFT);
+			unsetCastle(game, color, RIGHT);
+		}
+	}
+	if(piece == King) {
+		setKing(game, pos2, color);
+	}
+	row = ROW(pos1);
+	if(piece == Pawn && row == STARTPAWNROW(color) && ABS(ROW(pos2) - row) == 2)
+		setPassant(game, col);
+	else
+		unsetPassant(game);
+}

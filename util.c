@@ -132,3 +132,21 @@ void printGame(ChessSt *game) {
 	printBoard(game);
 	printStatus(game);
 }
+
+unsigned char parsePos(char *str) {
+	char c1, c2;
+	c1 = str[0];
+	c2 = str[1];
+	if(c1 >= 'a' && c1 <= 'z' && c2 >= '1' && c2 <= '8') {
+		return c1 - 'a' + (c2 - '1') * 8;
+	}
+	return -1;
+}
+Move parseMove(char *str) {
+	unsigned char pos1, pos2;
+	pos1 = parsePos(str);
+	if(pos1 == -1 || str[2] != ' ') return -1;
+	pos2 = parsePos(str + 3);
+	if(pos2 == -1) return -1;
+	return MOVE(pos1, pos2);
+}

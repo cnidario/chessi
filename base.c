@@ -43,3 +43,6 @@ void copy(ChessSt *dst, ChessSt *src) {
 	dst->king_pos = src->king_pos;
 	dst->castling_passant = src->castling_passant;
 }
+void setTurn(ChessSt *game, Color color) {
+	game->king_pos = (game->king_pos & ~(1<<TURN_BIT)) | color << TURN_BIT;
+}

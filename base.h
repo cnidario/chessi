@@ -73,9 +73,9 @@ typedef enum Mask { TURN_BIT = 12,
 typedef enum Direction { N = 8, S = -8, E = 1 , O = -1, NE = 9, NO = 7, SE = -7, SO = -9 } Direction;
 //se cumple: NE = N + E, NO = N + O. Lo mismo para S, E y O.
 
-#define MOVE(pos1, pos2) ((Move)((pos2)<<6)&(pos1))
+#define MOVE(pos1, pos2) (((pos2)<<POS_LEN)|(pos1))
 #define OVERFLOW_MOVE(from_col, to_pos) (ABS(col - COLUMN(to_pos)) > 2 || OOB(to_pos))
-#define STARTPAWNROW(color) ((color)? 6 : 2)
+#define STARTPAWNROW(color) ((color)? 6 : 1)
 //Modificadores
 void setPiece(ChessSt *game, unsigned char pos, PieceType piece);
 void setColor(ChessSt *game, unsigned char pos, Color color);
@@ -86,5 +86,6 @@ void setCastle(ChessSt *game, Color color, unsigned char side);
 void unsetCastle(ChessSt *game, Color color, unsigned char side);
 void setKing(ChessSt *game, unsigned char pos, Color color);
 void copy(ChessSt *dst, ChessSt *src);
+void setTurn(ChessSt *game, Color color);
 
 #endif

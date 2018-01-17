@@ -11,7 +11,7 @@ int isCheck(ChessSt *game) {
 	Color color;
 	//1. posición del rey del turno amenazada
 	color = TURN(game);
-	return isMenaced(game, color? WKING_POS(game) : BKING_POS(game), OPONENT(color));
+	return isMenaced(game, color? BKING_POS(game) : WKING_POS(game), OPONENT(color));
 }
 
 int isMenaced(ChessSt *game, unsigned char pos, Color color) {
@@ -64,21 +64,20 @@ int isMenaced(ChessSt *game, unsigned char pos, Color color) {
 	p = pos + d + O;
 	if(PIECE_AT(game, p) == Pawn && COLOR(game, p) == color)
 		return p;
-	return -1;
+	return 0;
 }
 // Primera pieza desde una posición en una dirección.
 // Se proyecta la dirección buscando la primera pieza desde la posición
 // Se devuelve la primera posición en esa dirección con una pieza o -1 si no hay posible
 int firstPieceAt(ChessSt *game, unsigned char from, Direction dir) {
-	unsigned char best, before, next, before_col, next_col;
+	unsigned char before, next, before_col, next_col;
 	before = from;
 	before_col = COLUMN(before);
-	best = -1;
 	while(1) {
 		next = before + dir;
 		next_col = COLUMN(next);
-		if(ABS(next_col - before_col) > 1 || OOB(next)) return best; //out of board
-		if(PIECE_AT(game, next)) return next;
+		if(ABS(next_col - before_col) > 1 || OOB(next)) return before == from? -1 : before; //out of board
+		if(OCCUPIED(game, next)) return next;
 		before = next;
 		before_col = next_col;
 	}
@@ -173,7 +172,7 @@ int validMove(ChessSt *game, Move move) {
 	//1. la posición de partida del movimiento debe tener pieza del color del turno
 	if(COLOR(game, pos1) != color) return 0;
 	//2. la posición de llegada del mov. NO puede tener pieza del color del turno
-	if(COLOR(game, pos2) == color) return 0;
+	if(PRESENT(game, pos2, color)) return 0;
 	//3. posiciones deben guardar tipo de movimiento válido en relación al tipo de pieza
 	if(!validPieceMove(game, pos1, pos2, PIECE_AT(game, pos1))) return 0;
 	//4. la jugada no debe dejar al color del turno en estado de jaque
@@ -214,4 +213,6 @@ int doMove(ChessSt *game, Move move) {
 		setPassant(game, col);
 	else
 		unsetPassant(game);
+	setTurn(game, OPONENT(color));
 }
+

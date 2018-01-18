@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "base.h"
+#include "chessi.h"
 
 void initGame(ChessSt *game) {
 	int i,j;
@@ -145,8 +147,49 @@ unsigned char parsePos(char *str) {
 Move parseMove(char *str) {
 	unsigned char pos1, pos2;
 	pos1 = parsePos(str);
-	if(pos1 == -1 || str[2] != ' ') return -1;
-	pos2 = parsePos(str + 3);
+	if(pos1 == -1) return -1;
+	pos2 = parsePos(str + 2);
 	if(pos2 == -1) return -1;
 	return MOVE(pos1, pos2);
+}
+
+int readMove(char *buffer, int len) {
+	int c, i;
+	i = 0;
+	while((c = getchar()) != -1) {
+		if(isspace(c)) continue;
+		buffer[i] = c;
+		if(++i >= len) break;;
+	}
+	if(i) {
+		buffer[i] = '\0';
+		return i;
+	} else
+		return -1;
+}
+
+void game(int print) {
+	ChessSt game;
+	Move move;
+	char line_buffer[5];
+	int end_game = 0;
+	parseGame(&game, "RNBQKBNRPPPPPPPP................................pppppppprnbqkbnr");
+	do {
+		if(readMove(line_buffer, 4) == -1) break;
+		if((move = parseMove(line_buffer)) == -1) {
+			fprintf(stderr, "Error parseando jugada %s\n", line_buffer);
+			break;
+		}
+		if(validMove(&game, move)) {
+			doMove(&game, move);
+			//end_game = isEndGame(&game);
+			if(print) {
+				printGame(&game);
+			}
+		} else {
+			fprintf(stderr, "Jugada no válida %s\n", line_buffer);
+		}
+
+	} while(!end_game);
+	puts("Fin de juego");
 }

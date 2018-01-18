@@ -8,5 +8,7 @@ char pieceToString(PieceType p);
 void printGame(ChessSt *game);
 unsigned char parsePos(char *str);
 Move parseMove(char *str);
+int readMove(char *buffer, int len);
+void game(int print);
 
 #endif

@@ -6,7 +6,7 @@
 
 void assertTrue(char *title, int condition) {
 	if(!condition) {
-		puts(title);
+		fputs(title, stderr);
 	}
 }
 int test_piecePlacing_1() {
@@ -74,16 +74,16 @@ int testPlay(ChessSt *game, char *play) {
 int testPlays(ChessSt *game, char *plays, int print_game_each_step) {
 	int i;
 	i = 0;
-	while(plays[i*6]) {
-		puts(plays + i*6);
-		if(testPlay(game, plays + i*6) && print_game_each_step)
+	while(plays[i*5]) {
+		puts(plays + i*5);
+		if(testPlay(game, plays + i*5) && print_game_each_step)
 			printGame(game);
 		i++;
 	}
 }
 int test_game_1() {
 	ChessSt game;
-	char play[] = "e2 e3";
+	char play[] = "e2e3";
 	parseGame(&game, "RNBQKBNRPPPPPPPP................................pppppppprnbqkbnr");
 	printGame(&game);
 	if(testPlay(&game, play))
@@ -94,8 +94,8 @@ int test_game_2() {
 	ChessSt game;
 	int i;
 	char *plays[] = { 
-		"a2 a3", "b2 b3", "c2 c3", "d2 d3", "e2 e3", "f2 f3", "g2 g3", "h2 h3",
-		"a2 a4", "b2 b4", "c2 c4", "d2 d4", "e2 e4", "f2 f4", "g2 g4", "h2 h4"
+		"a2a3", "b2b3", "c2c3", "d2d3", "e2e3", "f2f3", "g2g3", "h2h3",
+		"a2a4", "b2b4", "c2c4", "d2d4", "e2e4", "f2f4", "g2g4", "h2h4"
 	};
 	for(i = 0; i < sizeof(plays)/sizeof(char*); i++) {
 		parseGame(&game, "RNBQKBNRPPPPPPPP................................pppppppprnbqkbnr");
@@ -104,19 +104,34 @@ int test_game_2() {
 	}
 }
 
-int test_game_3() {
+int testGame(char **plays, int num_plays) {
 	ChessSt game;
 	int i;
-	char *plays[] = {
-		"a2 a4 a7 a5"
-	};
-	for(i = 0; i < sizeof(plays)/sizeof(char*); i++) {
+	for(i = 0; i < num_plays; i++) {
 		parseGame(&game, "RNBQKBNRPPPPPPPP................................pppppppprnbqkbnr");
 		if(testPlays(&game, plays[i], 1))
 			printGame(&game);
-	}	
+	}
+}
+
+int test_game_3() {
+	char *plays[] = {
+		"a2a4 a7a5"
+	};
+	testGame(plays, sizeof(plays)/sizeof(char*));
+}
+
+void tests() {
+	test_piecePlacing_1();
+	test_piecePlacing_2();
+	test_printGame_1();
+	test_castling_1();
+	test_game_1();
+	test_game_2();
+	test_game_3();
 }
 
 int main(int argc, char *argv[]) {
-	test_game_3();
+	//game(1);
+	tests();
 }

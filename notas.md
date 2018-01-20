@@ -1,5 +1,7 @@
 # Diseño en pseudocódigo de ajedrez
 
+http://buildingskills.itmaybeahack.com/book/python-2.6/html/p05/p05c06_chess.html
+
 ## Algoritmo principal
 
  inicializar estado

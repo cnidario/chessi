@@ -25,6 +25,7 @@ typedef struct ChessSt {
 	unsigned short king_pos;
 	unsigned char castling_passant;
 } ChessSt;
+typedef unsigned char Position;
 typedef unsigned short Move;
 
 typedef enum Mask { TURN_BIT = 12, 
